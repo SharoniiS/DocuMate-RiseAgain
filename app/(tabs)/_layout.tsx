@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+// import React is not needed for JSX in React 17+
 import { Platform } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
@@ -27,17 +27,10 @@ export default function TabLayout() {
         }),
       }}>
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
-          title: 'Home',
+          title: 'בית',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
       />
     </Tabs>

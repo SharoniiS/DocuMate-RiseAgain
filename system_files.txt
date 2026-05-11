@@ -1,0 +1,80 @@
+system_files.txt — תיאור ומטרת הקבצים בפרויקט
+
+הערה: קובץ זה נועד לשמש כתיאור מרכזי של מבנה הפרויקט. לפני כל בקשת עדכון/שינוי בקוד, בקשו מהסוכן לקרוא את הקובץ הזה כדי לקבל הקשר מלא על המיקומים והקבצים הרלוונטיים.
+
+---
+root:
+- package.json — תיאור חבילה ותלויות, סקריפטים להפעלה ובנייה.
+- package-lock.json — נעילת תלויות אוטומטית (npm).
+- README.md — תיעוד פרוייקט, הוראות הפעלה ושימוש.
+- tsconfig.json — קונפיגורציית TypeScript.
+- app.json — קובץ הגדרות עבור Expo (אם מדובר בפרויקט Expo).
+- .gitignore — קבצים/תיקיות שמוחרגות ממערכת הבקרה ב-Git.
+- .vscode/settings.json — הגדרות מקומיות ל-VSCode (אם קיימות).
+- package-lock.json — נעילת חבילות (מופיע גם ברשימה).
+- eslint.config.js — קונפיגורציית ESLint עבור הפרויקט.
+- keywordClassifier.ts — מודול לטיפול/מיון מילות מפתח (נראה כמו כלי עזר).
+- scripts/reset-project.js — סקריפט עזר לאיפוס הפרוייקט או המשימות השוטפות.
+
+src/hooks (hooks/):
+- hooks/useCategoryActions.ts — hooks ליצירת/עדכון/מחיקת קטגוריות (לוגיקה עסקית).
+- hooks/useColorScheme.ts — hook לזיהוי ערכת צבעים (dark/light) בסביבת native.
+- hooks/useColorScheme.web.ts — גרסת web של hook לזיהוי ערכת צבעים.
+- hooks/useThemeColor.ts — hook להחזרת צבעי נושא מותאמים לרכיבים.
+- hooks/useThemeColor.ts (מופיע ברשימה) — טיפול בצבעי נושא (ייתכן כפול ברשימה).
+
+context/:
+- context/CategoriesContext.tsx — הקשר (Context) עבור קטגוריות: אחסון, פרוביידר, ואופציות שיתוף בין רכיבים.
+
+constants/:
+- constants/Colors.ts — ערכי צבעים מרכזיים/קבועים לשימוש בפרויקט.
+
+assets/:
+- assets/fonts/SpaceMono-Regular.ttf — גופן מותאם לפרויקט.
+- assets/images/* — תמונות ורסורסים (adaptive-icon.png, favicon.png, icon.png, partial-react-logo.png, react-logo.png, react-logo@2x.png, react-logo@3x.png, splash-icon.png).
+
+components/:
+- components/CategoryList.tsx — רכיב שמציג רשימת קטגוריות.
+- components/CategoryManager.tsx — ממשק לניהול קטגוריות (הוספה/עריכה/מחיקה).
+- components/Collapsible.tsx — רכיב מתקפל (expand/collapse) לשימוש חוזר.
+- components/ConfirmDeleteDialog.tsx — דיאלוג לאישור מחיקה.
+- components/ExternalLink.tsx — קישור חיצוני מותאם (ייתכן עם איפשור פתיחה בדפדפן וכו').
+- components/HapticTab.tsx — Tab עם משוב הפטי (haptic) למכשירים נתמכים.
+- components/HelloWave.tsx — רכיב ויזואלי (אנימציה/ברכה) — כנראה למסך פתיחה.
+- components/MenuButton.tsx — כפתור תפריט מותאם.
+- components/ParallaxScrollView.tsx — ScrollView עם אפקט פרלקס.
+- components/ScrollableMenu.tsx — תפריט נגלל.
+- components/ThemedText.tsx — טקסט שמשתמש בצבעי נושא.
+- components/ThemedView.tsx — View שמשתמש בצבעי נושא.
+
+components/ui/:
+- components/ui/IconSymbol.tsx — אייקון/סמל, פיצ'ר לריבוי פלטפורמות.
+- components/ui/IconSymbol.ios.tsx — גרסה ייעודית ל-iOS.
+- components/ui/TabBarBackground.tsx — רקע ל-TabBar למכשירים non-iOS.
+- components/ui/TabBarBackground.ios.tsx — רקע ל-TabBar ב-iOS.
+
+app/ (ראוטים ורכיבי תצוגה מרכזיים):
+- app/_layout.tsx — layout גלובלי לאפליקציה (wrapping layout, providers וכו').
+- app/+not-found.tsx — עמוד Not Found (404/alternate route handling).
+- app/index.tsx — כניסה ראשית ל-Router / מסכי ברירת מחדל.
+- app/calendar.tsx — מסך לוח שנה.
+- app/credits.tsx — מסך קרדיטים/תודות.
+- app/manage-categories.tsx — מסך לניהול קטגוריות (UI משויך ל-CategoryManager).
+- app/medical-docs.tsx — מסך למסמכים רפואיים (ניהול/תצוגה).
+
+app/(tabs)/ (טאבים ותת-ראוטים):
+- app/(tabs)/_layout.tsx — Layout ספציפי לטאבים (tab bar וכו').
+- app/(tabs)/index.tsx — כניסה למשנה-ראוט של טאבים.
+- app/(tabs)/home.tsx — מסך הבית בטאבים (קובץ נוכחי בעבודה).
+- app/(tabs)/explore.tsx — מסך חיפוש/חקר בתוך האפליקציה.
+
+שחזורים/כפילויות:
+- בחלק מהרשומות יש כפילויות (ייתכן שפורמט החיפוש החזיר קבצים חזרה פעמיים); יש להתחשב בזה כשמעדכנים את הקובץ.
+
+הצעות תחזוקה קצרות:
+1) לפני כל בקשת שינוי: בקשו מהסוכן לקרוא את `system_files.txt` (אפשר לכתוב "READ: system_files.txt") — זה יחסוך קריאות מיותרות לקבצים ויעניק הקשר מהיר.
+2) שמרו על קו קצר בתיאורים: לשמור על 1–2 משפטים לכל קובץ בלבד.
+3) עדכון ידני/אוטומטי: ניתן לאתחל סקריפט קטן (node/ts) שיצרוך את מבנה התיקיות וירענן את הקובץ; אם תרצו, אני יכול להוסיף סקריפט כזה.
+
+סיום:
+- יצרתי תיאור ראשוני מלא המבוסס על שמות הקבצים והתיקיות. אם תרצו, אבצע קריאה של קבצים ספציפיים כדי לחדד תיאורים (למשל לפתוח `context/CategoriesContext.tsx` ולהוסיף מהפעולות שהוא מספק). ניתן גם להוסיף סקשן שמציין בקבצים שמועדפים לעריכה בעת הוספת תכונות (touch-points).
