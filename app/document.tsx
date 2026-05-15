@@ -156,7 +156,7 @@ export default function DocumentScreen() {
           <View style={dv.predCard}>
             <View style={dv.aiHead}>
               <Ionicons name="analytics-outline" size={14} color={AppColors.brand} />
-              <Text style={dv.predLabel}>AI אמרה</Text>
+              <Text style={dv.predLabel}>AI suggestion</Text>
             </View>
             <Text style={dv.predText}>
               {predictedCat.name} · ביטחון {Math.round((item.predictedConfidence ?? 0) * 100)}%

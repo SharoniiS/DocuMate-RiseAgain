@@ -10,14 +10,16 @@ export interface ClassificationResult {
 }
 
 export function classify(text: string, rules: ClassifierRule[]): ClassificationResult {
-  const words = normalize(text);
+  // Substring-match keywords against the normalized text as a single string so
+  // multi-word keywords ("עמוד שדרה", "blood pressure") work.
+  const joined = normalize(text).join(' ');
   let best: { categoryId: string; matched: string[] } | null = null;
 
   for (const rule of rules) {
     const matched = Array.from(new Set(
       rule.keywords
         .map(k => k.toLowerCase())
-        .filter(k => words.some(w => w.includes(k)))
+        .filter(k => joined.includes(k))
     ));
     if (matched.length > 0 && (!best || matched.length > best.matched.length)) {
       best = { categoryId: rule.categoryId, matched };

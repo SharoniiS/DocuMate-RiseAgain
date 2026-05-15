@@ -193,7 +193,7 @@ export function ScanModal({ visible, onClose }: Props) {
       predictedCategoryId,
       predictedConfidence,
       matchedKeywords: predictedMatched,
-      wasCorrected: predictedCategoryId !== targetCatId,
+      wasCorrected: predictedCategoryId != null && predictedCategoryId !== targetCatId,
       ocrText: pendingText ?? undefined,
     });
     setStep('success');

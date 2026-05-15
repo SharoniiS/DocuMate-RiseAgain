@@ -84,6 +84,8 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
   };
 
   // טען מה-AsyncStorage פעם אחת, ואם אין נתונים – אתחול לברירת מחדל
+  // For categories saved before the keywords-on-Category refactor, fill in
+  // missing keywords from DEFAULT_CATEGORIES so the classifier has rules to use.
   const reloadCategories = async () => {
     setLoading(true);
     try {
@@ -91,7 +93,12 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
       if (data) {
         const parsed = JSON.parse(data);
         if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id && parsed[0].items) {
-          setCategories(parsed);
+          const merged: Category[] = parsed.map((c: Category) => {
+            if (c.keywords && c.keywords.length > 0) return c;
+            const seed = DEFAULT_CATEGORIES.find(d => d.id === c.id);
+            return seed?.keywords ? { ...c, keywords: seed.keywords } : c;
+          });
+          setCategories(merged);
         } else {
           setCategories(DEFAULT_CATEGORIES);
           await AsyncStorage.setItem('categories', JSON.stringify(DEFAULT_CATEGORIES));
