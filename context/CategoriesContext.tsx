@@ -35,6 +35,7 @@ interface CategoriesContextType {
   setCategories: React.Dispatch<React.SetStateAction<CategoriesState>>;
   addDocument: (categoryId: string, item: Omit<CategoryItem, 'createdAt'>) => void;
   deleteDocument: (categoryId: string, idx: number) => void;
+  moveDocument: (fromCategoryId: string, idx: number, toCategoryId: string) => void;
   reloadCategories: () => Promise<void>;
   loading: boolean;
 }
@@ -62,6 +63,24 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
         ? { ...cat, items: cat.items.filter((_, i) => i !== idx) }
         : cat
     ));
+  };
+
+  const moveDocument = (fromCategoryId: string, idx: number, toCategoryId: string) => {
+    if (fromCategoryId === toCategoryId) return;
+    setCategories(prev => {
+      const fromCat = prev.find(c => c.id === fromCategoryId);
+      const item = fromCat?.items[idx];
+      if (!item) return prev;
+      const updatedItem: CategoryItem = {
+        ...item,
+        wasCorrected: item.predictedCategoryId != null && item.predictedCategoryId !== toCategoryId,
+      };
+      return prev.map(cat => {
+        if (cat.id === fromCategoryId) return { ...cat, items: cat.items.filter((_, i) => i !== idx) };
+        if (cat.id === toCategoryId) return { ...cat, items: [...cat.items, updatedItem] };
+        return cat;
+      });
+    });
   };
 
   // טען מה-AsyncStorage פעם אחת, ואם אין נתונים – אתחול לברירת מחדל
@@ -96,7 +115,7 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
   }, [categories, loading]);
 
   return (
-    <CategoriesContext.Provider value={{ categories, setCategories, addDocument, deleteDocument, reloadCategories, loading }}>
+    <CategoriesContext.Provider value={{ categories, setCategories, addDocument, deleteDocument, moveDocument, reloadCategories, loading }}>
       {children}
     </CategoriesContext.Provider>
   );

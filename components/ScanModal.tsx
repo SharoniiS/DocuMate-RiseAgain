@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { AppColors } from '../constants/Colors';
+import { CONFIDENCE_THRESHOLD, FALLBACK_CATEGORY_ID } from '../constants/classifier';
 import { useCategories } from '../context/CategoriesContext';
 import { classify } from '../keywordClassifier';
 
@@ -125,16 +126,13 @@ export function ScanModal({ visible, onClose }: Props) {
     setActiveKeywords(extractedKeywords);
     setOcrFailed(failed);
 
-    if (categoryId && confidence >= 0.67) {
-      // strong match — trust silently
+    if (categoryId && confidence >= CONFIDENCE_THRESHOLD) {
       setSelectedCategoryId(categoryId);
     } else if (categoryId) {
-      // weak match — pre-select but ask for confirmation
       setSelectedCategoryId(categoryId);
       setShowCategoryPicker(true);
     } else {
-      // no match — fall back to generalMed and open picker
-      setSelectedCategoryId('generalMed');
+      setSelectedCategoryId(FALLBACK_CATEGORY_ID);
       setShowCategoryPicker(true);
     }
 
@@ -168,7 +166,7 @@ export function ScanModal({ visible, onClose }: Props) {
 
   const handleSave = async () => {
     if (!previewUri) return;
-    const targetCatId = selectedCategoryId ?? 'generalMed';
+    const targetCatId = selectedCategoryId ?? FALLBACK_CATEGORY_ID;
     const extraMeta = [editedDate, editedDoctor].filter(Boolean);
     const finalKeywords = [...new Set([...activeKeywords, ...extraMeta])];
     const finalTitle = editedTitle || editedDoctor || 'מסמך';

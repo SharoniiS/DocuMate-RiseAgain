@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Image,
   Pressable,
@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CategoryPickerModal } from '@/components/CategoryPickerModal';
 import { AppColors } from '@/constants/Colors';
 import { useCategories } from '@/context/CategoriesContext';
 
@@ -25,14 +26,33 @@ export default function DocumentScreen() {
   const { catId, uri } = useLocalSearchParams<{ catId: string; uri: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { categories } = useCategories();
+  const { categories, moveDocument } = useCategories();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const decodedUri = decodeURIComponent(uri ?? '');
   const category = categories.find(c => c.id === catId);
-  const item = category?.items.find(i => i.uri === decodedUri);
+  const itemIdx = category?.items.findIndex(i => i.uri === decodedUri) ?? -1;
+  const item = itemIdx >= 0 ? category?.items[itemIdx] : undefined;
   const parentCat = category?.parentId
     ? categories.find(c => c.id === category.parentId)
     : null;
+  const predictedCat = item?.predictedCategoryId
+    ? categories.find(c => c.id === item.predictedCategoryId)
+    : null;
+
+  const onMove = (newCatId: string) => {
+    if (!category || itemIdx < 0) {
+      setPickerOpen(false);
+      return;
+    }
+    if (newCatId === category.id) {
+      setPickerOpen(false);
+      return;
+    }
+    moveDocument(category.id, itemIdx, newCatId);
+    setPickerOpen(false);
+    router.replace(`/document?catId=${newCatId}&uri=${encodeURIComponent(decodedUri)}`);
+  };
 
   if (!item || !category) {
     return (
@@ -130,7 +150,44 @@ export default function DocumentScreen() {
               : ''}
           </Text>
         </View>
+
+        {/* AI prediction provenance */}
+        {predictedCat && (
+          <View style={dv.predCard}>
+            <View style={dv.aiHead}>
+              <Ionicons name="analytics-outline" size={14} color={AppColors.brand} />
+              <Text style={dv.predLabel}>AI אמרה</Text>
+            </View>
+            <Text style={dv.predText}>
+              {predictedCat.name} · ביטחון {Math.round((item.predictedConfidence ?? 0) * 100)}%
+              {item.wasCorrected ? '  ·  (תוקן ידנית)' : ''}
+            </Text>
+            {item.matchedKeywords && item.matchedKeywords.length > 0 && (
+              <View style={dv.predTags}>
+                {item.matchedKeywords.map(k => (
+                  <View key={k} style={dv.predTag}>
+                    <Text style={dv.predTagTxt}>{k}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Change category */}
+        <Pressable onPress={() => setPickerOpen(true)} style={dv.changeBtn}>
+          <Ionicons name="folder-open-outline" size={16} color={AppColors.brand} />
+          <Text style={dv.changeBtnTxt}>שנה תיקייה</Text>
+        </Pressable>
       </ScrollView>
+
+      <CategoryPickerModal
+        visible={pickerOpen}
+        selectedCategoryId={category.id}
+        onSelect={onMove}
+        onClose={() => setPickerOpen(false)}
+        title="העבר לתיקייה"
+      />
     </View>
   );
 }
@@ -274,5 +331,62 @@ const dv = StyleSheet.create({
     color: AppColors.text,
     lineHeight: 21,
     textAlign: 'right',
+  },
+
+  predCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: AppColors.surface,
+    borderColor: AppColors.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    gap: 8,
+  },
+  predLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: AppColors.brand,
+    letterSpacing: 0.4,
+  },
+  predText: {
+    fontSize: 13,
+    color: AppColors.text,
+    textAlign: 'right',
+  },
+  predTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'flex-end',
+  },
+  predTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: AppColors.chip,
+  },
+  predTagTxt: {
+    fontSize: 11,
+    color: AppColors.textSub,
+  },
+
+  changeBtn: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: AppColors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+    paddingVertical: 12,
+  },
+  changeBtnTxt: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: AppColors.brand,
   },
 });
