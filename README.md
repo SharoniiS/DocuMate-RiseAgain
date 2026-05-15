@@ -1,50 +1,83 @@
-# Welcome to your Expo app 👋
+# Documately — ניהול מסמכים רפואיים
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+אפליקציית React Native לניהול וסיווג מסמכים עבור נכי צה"ל וחולי PTSD.
+המשתמש מצלם מסמך, המערכת מזהה טקסט דרך OCR ומסווגת את המסמך לתיקייה אוטומטית.
 
-## Get started
+---
 
-1. Install dependencies
+## Stack
 
-   ```bash
-   npm install
-   ```
+| שכבה | טכנולוגיה |
+|------|-----------|
+| Framework | React Native + Expo (SDK 52) |
+| Routing | expo-router (file-based) |
+| Storage | AsyncStorage via CategoriesContext |
+| OCR | Google Cloud Vision API |
+| Classification | keywordClassifier.ts (keyword matching, עברית/אנגלית) |
+| Icons | @expo/vector-icons (Ionicons) |
+| Language | TypeScript |
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## הרצה
 
 ```bash
-npm run reset-project
+npm install
+npx expo start --clear
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+סרקי QR עם Expo Go על הטלפון.
 
-## Learn more
+---
 
-To learn more about developing your project with Expo, look at the following resources:
+## מבנה תיקיות
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```
+app/
+  (tabs)/
+    _layout.tsx       # Tab bar + FAB סריקה
+    documents.tsx     # גריד 2 עמודות של כל המסמכים
+    folders.tsx       # רשימת תיקיות
+    scan.tsx          # placeholder (הלוגיקה ב-ScanModal)
+  _layout.tsx         # Root layout
+  index.tsx           # Redirect → documents
 
-## Join the community
+components/
+  ScanModal.tsx       # כל לוגיקת הסריקה: בחירת תמונה, OCR, סיווג, שמירה
+  CategoryList.tsx    # רשימת מסמכים בתוך קטגוריה
+  CategoryManager.tsx # ניהול תיקיות (הוספה/מחיקה)
 
-Join our community of developers creating universal apps.
+context/
+  CategoriesContext.tsx  # State גלובלי + AsyncStorage persistence
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+constants/
+  Colors.ts           # AppColors + SCREEN_TOP_PADDING
+
+keywordClassifier.ts  # סיווג מסמכים לפי מילות מפתח
+```
+
+---
+
+## קטגוריות ברירת מחדל
+
+| ID | שם | הגנה |
+|----|----|------|
+| `medicalDocs` | מסמכים רפואיים | מוגנת — לא ניתן למחיקה |
+| `receipts` | קבלות | מוגנת — לא ניתן למחיקה |
+
+קטגוריות נוספות יוצר המשתמש דרך "ניהול תיקיות".
+
+---
+
+## נקודות שימת לב לפני שחרור
+
+- **API Key**: מפתח Google Vision נמצא בתוך `ScanModal.tsx` — יש להעביר ל-`.env` ולהוסיף ל-`.gitignore`
+- **`app/medical-docs.tsx`** — מסך רשימת מסמכים רפואיים, נגיש מתיקיות → "מסמכים רפואיים"
+
+---
+
+## Design System
+
+כל הצבעים והמרווחים מוגדרים ב-`constants/Colors.ts`:
+- `AppColors` — פלטת הצבעים המלאה
+- `SCREEN_TOP_PADDING` — ריווח עליון אחיד לכל המסכים (ערך אחד לשינוי)

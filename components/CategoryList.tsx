@@ -1,7 +1,7 @@
-
-
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppColors } from '../constants/Colors';
 import { CategoryItem } from '../context/CategoriesContext';
 import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
@@ -10,7 +10,6 @@ interface CategoryListProps {
   items: CategoryItem[];
   onDelete: (idx: number) => void;
 }
-
 
 export default function CategoryList({ title, items, onDelete }: CategoryListProps) {
   const [modalVisible, setModalVisible] = useState(false);
@@ -35,50 +34,70 @@ export default function CategoryList({ title, items, onDelete }: CategoryListPro
     setPendingDeleteIdx(null);
   };
 
+  if (items.length === 0) {
+    return (
+      <View style={styles.empty}>
+        <Ionicons name="document-outline" size={48} color={AppColors.border} />
+        <Text style={styles.emptyText}>אין מסמכים עדיין</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 36, fontWeight: '700', color: '#f3eae0', textAlign: 'center', marginBottom: 24 }}>{title}</Text>
-      <ScrollView style={{ width: '100%' }}>
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {items.map((item, idx) => (
-          <View key={item.uri} style={{ marginBottom: 24, alignItems: 'center' }}>
-            {/* מילות מפתח מעל התמונה */}
-            {item.keywords && item.keywords.length > 0 && (
-              <View style={{ marginBottom: 4 }}>
-                <Text style={{ color: '#facc15', fontSize: 14, fontWeight: '600', textAlign: 'center' }}>
-                  {item.keywords.slice(0, 5).join(', ')}
-                </Text>
+          <View key={item.uri} style={styles.card}>
+            <Pressable onPress={() => setPreviewIdx(idx)} style={styles.thumbWrap}>
+              <Image source={{ uri: item.uri }} style={styles.thumb} resizeMode="cover" />
+              <View style={styles.overlay}>
+                <Ionicons name="expand-outline" size={20} color="#fff" />
+                <Text style={styles.overlayText}>הצג מסמך</Text>
               </View>
-            )}
-            <Text style={{ color: '#CBD5E1', fontSize: 16, marginBottom: 6 }}>{`מסמך #${idx + 1}`}</Text>
-            <Pressable onPress={() => setPreviewIdx(idx)} style={styles.thumbPressable}>
-              <Image source={{ uri: item.uri }} style={styles.thumbImage} />
-              <View style={styles.overlay}><Text style={styles.overlayText}>הצג מסמך</Text></View>
             </Pressable>
-            <Pressable onPress={() => confirmDelete(idx)} style={styles.deleteBtn}>
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>מחק</Text>
+
+            <View style={styles.cardBody}>
+              <Text style={styles.docNum} numberOfLines={1}>{item.title || `מסמך #${idx + 1}`}</Text>
+              {item.keywords && item.keywords.length > 0 && (
+                <Text style={styles.keywords} numberOfLines={2}>
+                  {item.keywords.slice(0, 5).join(' · ')}
+                </Text>
+              )}
+            </View>
+
+            <Pressable
+              onPress={() => confirmDelete(idx)}
+              style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.7 }]}
+              hitSlop={8}
+            >
+              <Ionicons name="trash-outline" size={18} color={AppColors.danger} />
             </Pressable>
           </View>
         ))}
       </ScrollView>
+
       <ConfirmDeleteDialog
         visible={modalVisible}
         onConfirm={handleDelete}
         onCancel={handleCancel}
-        message={`האם אתה בטוח שברצונך למחוק ${title === 'מסמכים רפואיים' ? 'את המסמך' : 'את הקבלה'}?`}
+        message={`האם אתה בטוח שברצונך למחוק את המסמך?`}
       />
+
       <Modal visible={previewIdx !== null} transparent animationType="fade" onRequestClose={() => setPreviewIdx(null)}>
         <View style={styles.modalBg}>
+          <Pressable onPress={() => setPreviewIdx(null)} style={styles.closeBtn}>
+            <Ionicons name="close" size={24} color="#fff" />
+          </Pressable>
           {previewIdx !== null && (
-            <View style={{ width: '100%', alignItems: 'center' }}>
-              <Pressable onPress={() => setPreviewIdx(null)} style={{ alignSelf: 'flex-end', margin: 16, padding: 8, backgroundColor: '#243B55', borderRadius: 8 }}>
-                <Text style={{ color: '#facc15', fontWeight: 'bold', fontSize: 18 }}>✕ סגור</Text>
-              </Pressable>
-              <Image
-                source={{ uri: items[previewIdx].uri }}
-                style={{ width: '95%', height: 400, borderRadius: 18, borderWidth: 2, borderColor: '#CBD5E1', backgroundColor: '#222' }}
-                resizeMode="contain"
-              />
-            </View>
+            <Image
+              source={{ uri: items[previewIdx].uri }}
+              style={styles.fullImage}
+              resizeMode="contain"
+            />
           )}
         </View>
       </Modal>
@@ -87,61 +106,94 @@ export default function CategoryList({ title, items, onDelete }: CategoryListPro
 }
 
 const styles = StyleSheet.create({
-  thumbPressable: {
-    width: '100%',
-    height: 180,
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#CBD5E1',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 4,
-    marginBottom: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
-  thumbImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
+  scroll: { flex: 1 },
+  scrollContent: { gap: 12, paddingBottom: 24 },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: AppColors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+  },
+  thumbWrap: {
+    width: 80,
+    height: 80,
+    position: 'relative',
+  },
+  thumb: {
+    width: 80,
+    height: 80,
   },
   overlay: {
     position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    backgroundColor: 'rgba(36,59,85,0.7)',
-    paddingVertical: 6,
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 2,
   },
   overlayText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: 'bold',
-    letterSpacing: 1,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  cardBody: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  docNum: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: AppColors.text,
+  },
+  keywords: {
+    fontSize: 12,
+    color: AppColors.textSub,
+    textAlign: 'right',
   },
   deleteBtn: {
-    marginTop: 8,
-    alignSelf: 'center',
-    backgroundColor: '#e53e3e',
-    padding: 8,
-    borderRadius: 8,
-    minWidth: 60,
+    padding: 12,
+  },
+  empty: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: AppColors.textSub,
   },
   modalBg: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: 'rgba(0,0,0,0.92)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  closeBtn: {
+    position: 'absolute',
+    top: 52,
+    right: 16,
+    padding: 8,
+    zIndex: 1,
+  },
   fullImage: {
-    width: '90%',
-    height: '70%',
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: '#CBD5E1',
+    width: '95%',
+    height: '75%',
+    borderRadius: 12,
   },
 });

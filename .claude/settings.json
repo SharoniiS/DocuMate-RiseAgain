@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(Test-Path \"c:\\\\Users\\\\golds\\\\RiseAgain\\\\README.md\")",
+      "Bash(Remove-Item \"c:\\\\Users\\\\golds\\\\RiseAgain\\\\app\\\\calendar.tsx\" -Force)",
+      "Bash(Remove-Item \"c:\\\\Users\\\\golds\\\\RiseAgain\\\\app\\\\credits.tsx\" -Force)",
+      "Bash(Remove-Item \"c:\\\\Users\\\\golds\\\\RiseAgain\\\\components\\\\MenuButton.tsx\" -Force)",
+      "Read(//c/Users/golds/.claude/projects/c--Users-golds-RiseAgain/memory/**)",
+      "Read(//c/Users/golds/Desktop/Sharon/DocuMate/expo-app/**)",
+      "Read(//c/Users/golds/Desktop/Sharon/DocuMate/expo-app/screens/**)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\golds\\.claude\\projects\\c--Users-golds-RiseAgain\\memory"
     ]
   }
 }

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx expo *)",
+      "Bash(eas --version)",
+      "Bash(eas whoami *)",
+      "Bash(eas register *)",
+      "Bash(start https://expo.dev/signup)",
+      "Bash(eas build:configure --platform android)",
+      "Bash(eas project:init)",
+      "Bash(eas project:init --force)",
+      "Bash(eas build *)",
+      "PowerShell(& \"C:\\\\Users\\\\golds\\\\AppData\\\\Local\\\\Programs\\\\Microsoft VS Code\\\\bin\\\\code.cmd\" --version)"
+    ]
+  }
+}
