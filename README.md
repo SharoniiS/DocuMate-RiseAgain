@@ -2,7 +2,7 @@
 
 > **For:** IDF disabled veterans and PTSD patients  
 > **Vision:** A personal medical memory — automatically organized, searchable, and AI-enhanced  
-> **Status:** MVP with OCR ✓ | ML Classifier (7-phase plan) → In development
+> **Status:** MVP with OCR ✓ | Keyword classifier + confidence + correction loop ✓ | Labeling tool ✓ | ML model (LaBSE) → Next
 
 ---
 
@@ -24,10 +24,17 @@ Documately is a React Native app that lets users:
 ### Current State (MVP — Phase 1)
 - ✅ React Native + Expo (SDK 54, TypeScript)
 - ✅ OCR: @react-native-ml-kit/text-recognition (on-device, free, Hebrew)
-- ✅ Classification: Keyword rules (fallback classifier)
-- ✅ Storage: AsyncStorage (on-device, persistent)
-- ✅ UI: Tab-based navigation (documents, folders, scan, profile)
+- ✅ Classification: **Generic** keyword classifier (takes rules as input — see Phase 1.5)
+- ✅ Storage: AsyncStorage (on-device, persistent) with auto-migration on schema changes
+- ✅ UI: Tab-based navigation (home, folders, scan FAB, documents, **review**, profile)
 - ✅ File handling: Permanent `documentDirectory` storage, temp cache cleanup
+
+### Current State (Phase 1.5 — Labeling & Feedback Infrastructure)
+- ✅ **Confidence scoring** — every prediction returns `{categoryId, confidence: 0..1, matched: string[]}`
+- ✅ **Prediction provenance** — every saved doc permanently records what the AI guessed (`predictedCategoryId`, `predictedConfidence`, `matchedKeywords`, `wasCorrected`, full `ocrText`)
+- ✅ **Re-classification post-save** — `moveDocument` primitive keeps the prediction frozen while updating the actual category, so corrections are never lost
+- ✅ **Review tab** — counters (total / corrected / low-confidence), filters (all / corrected / low-confidence / unlabeled), per-row move action, JSON export to disk
+- ✅ **Category-agnostic classifier** — keywords live on the `Category` object itself; adding a new category = one entry in `constants/defaultCategories.ts`, zero classifier changes
 
 ### Planned ML System (Phase 2-7 — Multi-month rollout)
 
@@ -64,6 +71,100 @@ Documately is a React Native app that lets users:
 │  Model versioning (timestamps), runtime metrics, alerts         │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 🏷️ Phase 1.5 — Labeling & Feedback Infrastructure
+
+This phase bridges the MVP and Phase 2 (Data Collection). Before feeding real medical documents into a future ML pipeline, the app needs to (a) make the keyword classifier honest about its uncertainty, (b) capture every disagreement between AI and human as labeled data, and (c) make it easy for the developer and a small group of colleagues to upload documents and correct mistakes in-app.
+
+### What changed architecturally
+
+| Before | After |
+|---|---|
+| `classifyToCategoryId(text)` returned `string \| null` with no confidence | `classify(text, rules)` returns `{categoryId, confidence: 0..1, matched: string[]}` |
+| Keywords lived inside `keywordClassifier.ts`, glued to category IDs via a hardcoded `idMap` | Keywords live on the `Category` object in `constants/defaultCategories.ts`. The classifier knows nothing about specific category IDs. |
+| First rule that matched won | Best rule wins (most distinct keywords matched). |
+| Confidence was binary (1 or 0) and meaningless | `confidence = min(1, matched.length / 3)`: 1 match = 0.33, 2 = 0.67, 3+ = 1.0. Tune once real correction data exists. |
+| User could override the AI's guess in the preview screen, but the prediction was discarded on save | Every saved doc permanently records `predictedCategoryId`, `predictedConfidence`, `matchedKeywords`, `wasCorrected`, and full `ocrText`. The prediction is never mutated — it's the historical truth. |
+| No way to fix a wrong classification post-save without deleting | `moveDocument(fromCatId, idx, toCatId)` in `CategoriesContext`. Updates `wasCorrected` based on prediction vs. new actual category. |
+| Multi-word keywords like `"עמוד שדרה"` or `"לחץ דם"` silently never matched | Classifier matches against the joined normalized text, so multi-word keywords work. |
+
+### The correction loop
+
+```
+User scans document
+   ↓
+OCR (ML Kit, on-device, Hebrew-aware)
+   ↓
+Generic keyword classifier — input: text + rules built from categories
+   ↓
+{categoryId, confidence, matched} returned to ScanModal
+   ↓
+   confidence ≥ 0.67 → trust silently, pre-select category
+   0 < conf < 0.67 → pre-select + auto-open picker for confirmation
+   confidence = 0   → fall back to generalMed + open picker
+   ↓
+User saves (with or without overriding)
+   ↓
+addDocument() persists: uri, title, keywords, predictedCategoryId,
+              predictedConfidence, matchedKeywords, wasCorrected, ocrText
+   ↓
+Review tab shows AI prediction vs actual location for every doc
+   ↓
+User taps folder icon on a wrong row → moveDocument()
+   → predictedCategoryId stays frozen; only actual location + wasCorrected update
+   ↓
+User taps Export FAB → exportFeedbackData() writes feedback_<ts>.json
+              to FileSystem.documentDirectory
+   ↓
+Developer pulls file via Xcode / `adb pull` → seeds Phase 2 dataset
+```
+
+### Key files and primitives
+
+| Path | What it does |
+|---|---|
+| `keywordClassifier.ts` | Pure function `classify(text, rules)`. No knowledge of specific categories. |
+| `constants/classifier.ts` | `CONFIDENCE_THRESHOLD = 0.67`, `FALLBACK_CATEGORY_ID = 'generalMed'`. Single source of truth — never inline these literals elsewhere. |
+| `constants/defaultCategories.ts` | Seed data with `keywords?: string[]` per category. **To add a category: add one entry here. Done. Zero classifier changes.** |
+| `context/CategoriesContext.tsx` | `Category` and `CategoryItem` types (with prediction fields). `addDocument` / `deleteDocument` / `moveDocument`. AsyncStorage hydration with auto-migration (fills in missing `keywords` from `DEFAULT_CATEGORIES` for categories saved before this refactor). |
+| `components/ScanModal.tsx` | Scan UX. Stores predictions in component state (never mutated after `processFile`) and passes them to `addDocument` at save time. |
+| `components/CategoryPickerModal.tsx` | Reusable bottom-sheet picker. Used by the Review tab and document detail screen. |
+| `app/(tabs)/review.tsx` | The labeling tool. Counters + filters + per-row move + JSON export. |
+| `app/document.tsx` | "AI suggestion" card showing predicted category, confidence %, matched keywords, and a "שנה תיקייה" button that calls `moveDocument` and rewrites the route. |
+| `utils/feedback.ts` | `exportFeedbackData(categories)` → `FeedbackRecord[]`. Shape: `{predicted, actual, confidence, matched, wasCorrected, ocrText, createdAt}`. Only includes items where `predictedCategoryId !== undefined`. |
+
+### Export format
+
+```json
+[
+  {
+    "predicted": "medicalDocs",
+    "actual": "cardiology",
+    "confidence": 0.33,
+    "matched": ["טיפול"],
+    "wasCorrected": true,
+    "ocrText": "תאריך: 15/05/2026\nאבחון: לחץ דם גבוה\nטיפול: ...",
+    "createdAt": "2026-05-15T14:30:22.000Z"
+  }
+]
+```
+
+This is the seed format for Phase 2 (`dataset.json`). The shape intentionally separates `predicted` from `actual` and keeps the raw OCR text — both pieces matter for retraining and for analyzing where the rule classifier was systematically wrong.
+
+### Where the export file goes
+
+Tapping the export FAB writes `feedback_<timestamp>.json` to `FileSystem.documentDirectory`, which is sandboxed per platform:
+- **iOS sim:** `~/Library/Developer/CoreSimulator/Devices/<device>/data/Containers/Data/Application/<app>/Documents/`
+- **iOS device:** Pull via Xcode → Devices → app → Container
+- **Android:** `adb shell run-as <pkg> ls files/` or via Android Studio's Device File Explorer
+
+For nicer "AirDrop / email to colleague" UX, add `expo-sharing` and call `Sharing.shareAsync(path)` after the write. Intentionally not done yet — adds a dep that isn't needed for the developer workflow today.
+
+### Privacy note for this phase
+
+We **do** persist the full OCR text on every saved document (`ocrText`), and it leaves the device only when the developer manually exports + pulls the JSON file. The data stays in AsyncStorage (unencrypted; iOS sandbox + file protection, Android private dir) for now. Before any cloud sync or pilot beyond the developer's circle, add an explicit consent flow and encryption — see `.claude/memory/security_deferred.md`.
 
 ---
 
@@ -293,45 +394,54 @@ RiseAgain/
   │   │   ├── home.tsx              # Home screen (greeting, recent docs)
   │   │   ├── documents.tsx         # Vault with filters
   │   │   ├── folders.tsx           # Category hierarchy
-  │   │   ├── scan.tsx              # Placeholder
-  │   │   └── profile.tsx           # User profile (TODO)
-  │   ├── _layout.tsx               # Root with RTL
+  │   │   ├── scan.tsx              # FAB hook (modal lives in _layout)
+  │   │   ├── review.tsx            # ✅ Labeling tool — counters, filters, per-row move, export
+  │   │   └── profile.tsx           # User profile (placeholder)
+  │   ├── _layout.tsx               # Root with RTL + CategoriesProvider
   │   ├── index.tsx                 # → home
-  │   └── document.tsx              # Document detail view
+  │   ├── document.tsx              # Document detail (now shows AI suggestion + change-category btn)
+  │   └── manage-categories.tsx     # Category CRUD
   │
   ├── components/
-  │   ├── ScanModal.tsx             # Scan UX (OCR → classify → save)
-  │   ├── DocRow.tsx                # Document thumbnail
+  │   ├── ScanModal.tsx             # Scan UX (OCR → classify → save w/ prediction capture)
+  │   ├── CategoryPickerModal.tsx   # ✅ Reusable bottom-sheet picker
+  │   ├── DocRow.tsx                # Document row
   │   ├── CategoryList.tsx          # Category listing
-  │   └── CategoryManager.tsx       # Add/delete categories
+  │   ├── CategoryManager.tsx       # Add/delete categories
+  │   └── ConfirmDeleteDialog.tsx   # Delete confirmation
+  │
+  ├── constants/
+  │   ├── Colors.ts                 # Theme palette
+  │   ├── classifier.ts             # ✅ CONFIDENCE_THRESHOLD, FALLBACK_CATEGORY_ID
+  │   └── defaultCategories.ts      # ✅ Seed categories with keywords[] — single source of truth
   │
   ├── context/
-  │   └── CategoriesContext.tsx     # Global state + persistence
+  │   └── CategoriesContext.tsx     # Global state, moveDocument, AsyncStorage + migration
   │
-  ├── keywordClassifier.ts          # Current keyword rules
-  │   
-  ├── app/utils/ (to be created)
+  ├── utils/
+  │   └── feedback.ts               # ✅ exportFeedbackData() → FeedbackRecord[]
+  │
+  ├── keywordClassifier.ts          # ✅ Generic classify(text, rules) — category-agnostic
+  │
+  ├── app/utils/ (to be created — Phase 4+)
   │   ├── classifier.ts             # ← ONNX model wrapper (Phase 4)
   │   ├── classifierMetrics.ts      # ← Runtime metrics (Phase 7)
-  │   └── classifierConfig.ts       # ← Config: MODEL_VERSION, CONFIDENCE_THRESHOLD
+  │   └── classifierConfig.ts       # ← MODEL_VERSION etc.
   │
-  ├── context/ (to be created)
-  │   └── FeedbackContext.tsx       # ← User corrections tracking (Phase 5)
-  │
-  ├── scripts/ (to be created)
+  ├── scripts/ (to be created — Phase 2+)
   │   ├── train.py                  # ← ML training pipeline (Phase 3)
   │   ├── batch_label.py            # ← Batch OCR labeling (Phase 2)
   │   ├── validate_model.py         # ← Validation gates (Phase 3)
-  │   └── export_feedback.py        # ← Merge corrections + retrain (Phase 5)
+  │   └── export_feedback.py        # ← Consume feedback_*.json + retrain (Phase 5)
   │
-  ├── app/assets/model/ (to be created)
-  │   ├── model_v{timestamp}.onnx   # ← Versioned ONNX model (Phase 3+)
+  ├── app/assets/model/ (to be created — Phase 3+)
+  │   ├── model_v{timestamp}.onnx   # ← Versioned ONNX model
   │   └── label_encoder.json        # ← Class mapping
   │
-  ├── data/ (to be created)
-  │   ├── dataset.json              # ← Training data (Phase 2+)
-  │   ├── model_metrics.json        # ← Validation results (Phase 3+)
-  │   └── training_log.json         # ← Run metadata (Phase 3+)
+  ├── data/ (to be created — Phase 2+)
+  │   ├── dataset.json              # ← Training data
+  │   ├── model_metrics.json        # ← Validation results
+  │   └── training_log.json         # ← Run metadata
   │
   ├── .claude/
   │   └── memory/                   # Session memories for AI context
@@ -341,6 +451,8 @@ RiseAgain/
   ├── eas.json                      # EAS build config
   └── README.md (this file)
 ```
+
+✅ = built in Phase 1.5. The labeling tool produces the seed data for Phase 2's `dataset.json`.
 
 ---
 
@@ -366,12 +478,22 @@ npx expo start --dev-client
 ### Current MVP Flow
 
 1. **Tap FAB** (blue circle, center bottom)
-2. **Pick image** from gallery
+2. **Pick image** from gallery (or capture via camera)
 3. **Wait for OCR** (ML Kit extracts text)
-4. **Review text** in preview modal
-5. **Pick category** from dropdown (currently keyword-classified)
-6. **Tap "כן, שמור"** to save
+4. **Review preview** — AI suggestion + confidence + matched keywords shown in the "אנחנו חושבים" card. Picker auto-opens if confidence < 67%.
+5. **Confirm or override** the category, optionally edit title / date / doctor / keywords
+6. **Tap "כן, שמור"** to save — the AI's original prediction is captured permanently regardless of what you chose
 7. **Check Documents tab** → Document persisted with thumbnail
+
+### Labeling Flow (Phase 1.5 — use this to build the Phase 2 dataset)
+
+1. Scan several documents through the normal flow above
+2. Open the **סקירה (Review)** tab
+3. See counters at top: total / corrected with % / low-confidence count
+4. Filter to focus on what matters: **תוקנו** (where you overrode the AI) / **ביטחון נמוך** (where the AI was uncertain) / **ללא תיוג** (where OCR failed or no rule matched)
+5. Tap the **folder icon** on any row → pick the right category. The doc moves; the AI's original guess stays recorded.
+6. Tap the **ייצוא** FAB → JSON file is written to the app's document directory. Pull it via Xcode or `adb pull`.
+7. Repeat. Aim for ≥8 examples per category for Phase 2.
 
 ---
 
@@ -423,6 +545,18 @@ const permanentUri = `${(FileSystem as any).documentDirectory}doc_${Date.now()}.
 - Use timestamp versioning: `model_v{YYYYMMDD_HHMMSS}.onnx`
 - Keep last 3 models for easy rollback
 
+### 6. **Conventions Established in Phase 1.5 (DO NOT BREAK)**
+
+These conventions protect the feedback data that will train the ML model. Breaking them silently corrupts the dataset.
+
+- **Never mutate `predictedCategoryId` after `addDocument`.** It's the historical record of what the AI said. Only `wasCorrected` and the document's actual location change when a user re-classifies via `moveDocument`.
+- **Never inline `0.67` or `'generalMed'`.** Import `CONFIDENCE_THRESHOLD` and `FALLBACK_CATEGORY_ID` from `constants/classifier.ts`. A future rename of `generalMed` shouldn't silently break saves.
+- **`wasCorrected` requires `predictedCategoryId != null`.** Otherwise OCR-failed docs (where the AI made no prediction) get counted as "corrections," inflating the corrected-percent counter and corrupting `feedback_*.json`. Both `ScanModal.handleSave` and `CategoriesContext.moveDocument` enforce this — keep both in sync.
+- **Adding a category is a one-file change.** Add an entry to `constants/defaultCategories.ts` with its `keywords?: string[]`. Do not edit `keywordClassifier.ts` — it's category-agnostic on purpose.
+- **The classifier matches multi-word keywords.** It joins normalized words with spaces and does substring matching, so `"עמוד שדרה"`, `"לחץ דם"`, `"blood pressure"` etc. work. Don't go back to per-word matching.
+- **AsyncStorage hydration includes a migration.** `reloadCategories` fills in missing `keywords` from `DEFAULT_CATEGORIES` for any category stored before the keywords-on-Category refactor. Keep this migration until you're certain no device in the wild has the old shape.
+- **`utils/feedback.ts` is the export contract.** `FeedbackRecord` is the shape Phase 5's retrain pipeline will consume. Changing it means changing the Phase 5 ingestion code too.
+
 ---
 
 ## 📋 Phase Breakdown & Timelines
@@ -457,9 +591,10 @@ If you're an AI resolving an issue on this project:
 
 1. **Check the memories** in `.claude/memory/` — contains project context, security notes, and product philosophy
 2. **Understand PTSD-informed design** — minimize cognitive load, no alert dialogs, one-tap paths, warm language
-3. **Know the MVP state** — OCR + keyword classifier work; ML system is planned, not built yet
-4. **Security first** — Any cloud/backend work requires stopping to address security
-5. **Run the app first** — Test in Expo Dev Client before claiming success; memory management and RTL can be tricky
+3. **Know the current state** — Phase 1 (MVP with OCR) and Phase 1.5 (labeling tool with confidence + correction loop + JSON export) are both shipped. The Review tab is the labeling/correction surface. ML model (Phase 2-7) is planned, not built.
+4. **Read "Conventions Established in Phase 1.5" before touching the classifier, scan flow, or feedback path** — those conventions exist because of real bugs we hit
+5. **Security first** — Any cloud/backend work requires stopping to address security. `ocrText` is now persisted per document; that data must not leave the device without explicit consent + encryption.
+6. **Run the app first** — Test in Expo Dev Client before claiming success; memory management and RTL can be tricky. ML Kit OCR does NOT work in Expo Go — needs a native dev client build (`npx expo run:ios` / `run:android`).
 
 ### For Humans
 
