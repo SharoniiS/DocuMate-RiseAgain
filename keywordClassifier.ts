@@ -1,62 +1,33 @@
+export interface ClassifierRule {
+  categoryId: string;
+  keywords: string[];
+}
+
 export interface ClassificationResult {
-  category: string;
-  score: number;
+  categoryId: string | null;
+  confidence: number;
   matched: string[];
 }
 
-const RULES: { category: string; keywords: string[] }[] = [
-  {
-    category: 'credit',
-    keywords: ['זיכוי', 'החזר', 'credit', 'refund'],
-  },
-  {
-    category: 'receipt',
-    keywords: ['קבלה', 'חשבונית', 'receipt', 'invoice'],
-  },
-  {
-    category: 'orthopedic',
-    keywords: ['אורטופד', 'עמוד שדרה', 'ברך', 'ירך', 'שבר', 'עצם', 'מפרק', 'גיד', 'orthopedic', 'fracture', 'spine', 'knee', 'hip'],
-  },
-  {
-    category: 'cardiology',
-    keywords: ['לב', 'קרדיולוג', 'א.ק.ג', 'אקג', 'לחץ דם', 'עורק', 'cardiac', 'cardiology', 'ecg', 'ekg', 'blood pressure'],
-  },
-  {
-    category: 'ophthalmology',
-    keywords: ['עיניים', 'עין', 'ראייה', 'רשתית', 'קרנית', 'משקפיים', 'ophthalmology', 'retina', 'cornea', 'vision'],
-  },
-  {
-    category: 'medical',
-    keywords: ['רופא', 'דוקטור', 'מרפאה', 'רפואי', 'מחלה', 'טיפול', 'בדיקה', 'אבחנה', 'תרופה', 'מומחה', 'הפניה', 'בית חולים', 'clinic', 'hospital', 'doctor', 'diagnosis', 'treatment', 'prescription'],
-  },
-];
-
-// מחזיר category ID התואם ל-context, או null
-export function classifyToCategoryId(text: string): string | null {
+export function classify(text: string, rules: ClassifierRule[]): ClassificationResult {
   const words = normalize(text);
-  const idMap: Record<string, string> = {
-    credit: 'receipts',
-    receipt: 'receipts',
-    orthopedic: 'orthopedic',
-    cardiology: 'cardiology',
-    ophthalmology: 'ophthalmology',
-    medical: 'medicalDocs',
-  };
-  for (const rule of RULES) {
-    const matched = words.filter(w => rule.keywords.some(k => w.includes(k)));
-    if (matched.length > 0) return idMap[rule.category] ?? null;
-  }
-  return null;
-}
+  let best: { categoryId: string; matched: string[] } | null = null;
 
-// שמור תאימות לקוד ישן
-export function classify(text: string): ClassificationResult[] {
-  const words = normalize(text);
-  for (const rule of RULES) {
-    const matched = words.filter(w => rule.keywords.some(k => w.includes(k)));
-    if (matched.length > 0) return [{ category: rule.category, score: 1, matched }];
+  for (const rule of rules) {
+    const matched = Array.from(new Set(
+      rule.keywords
+        .map(k => k.toLowerCase())
+        .filter(k => words.some(w => w.includes(k)))
+    ));
+    if (matched.length > 0 && (!best || matched.length > best.matched.length)) {
+      best = { categoryId: rule.categoryId, matched };
+    }
   }
-  return [{ category: 'receipt', score: 0, matched: [] }];
+
+  if (!best) return { categoryId: null, confidence: 0, matched: [] };
+  // 1 match = 0.33, 2 = 0.67, 3+ = 1.0. Tune once we have correction data.
+  const confidence = Math.min(1, best.matched.length / 3);
+  return { categoryId: best.categoryId, confidence, matched: best.matched };
 }
 
 function normalize(text: string): string[] {

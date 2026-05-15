@@ -1,23 +1,28 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { DEFAULT_CATEGORIES } from '../constants/defaultCategories';
 
 
-// פריט בקטגוריה
 export type CategoryItem = {
   uri: string;
   keywords: string[];
   createdAt?: string;
   title?: string;
+  predictedCategoryId?: string | null;
+  predictedConfidence?: number;
+  matchedKeywords?: string[];
+  wasCorrected?: boolean;
+  ocrText?: string;
 };
 
-// קטגוריה
 export type Category = {
   id: string;
   name: string;
   parentId?: string;
   color?: string;
   icon?: string;
+  keywords?: string[];
   items: CategoryItem[];
 };
 
@@ -39,19 +44,8 @@ interface CategoriesContextType {
 const CategoriesContext = createContext<CategoriesContextType | undefined>(undefined);
 
 
-
-const initialCategories: CategoriesState = [
-  { id: 'receipts', name: 'זיכויים', color: '#4fd1c5', icon: 'receipt', items: [] },
-  { id: 'medicalDocs', name: 'מסמכים רפואיים', color: '#f56565', icon: 'file-medical', items: [] },
-  { id: 'orthopedic', name: 'אורטופדיה', parentId: 'medicalDocs', items: [] },
-  { id: 'cardiology', name: 'קרדיולוגיה', parentId: 'medicalDocs', items: [] },
-  { id: 'ophthalmology', name: 'עיניים', parentId: 'medicalDocs', items: [] },
-  { id: 'generalMed', name: 'כללי', parentId: 'medicalDocs', items: [] },
-];
-
-
 export function CategoriesProvider({ children }: { children: React.ReactNode }) {
-  const [categories, setCategories] = useState<CategoriesState>(initialCategories);
+  const [categories, setCategories] = useState<CategoriesState>(DEFAULT_CATEGORIES);
   const [loading, setLoading] = useState(true);
 
   const addDocument = (categoryId: string, item: Omit<CategoryItem, 'createdAt'>) => {
@@ -80,16 +74,16 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
         if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id && parsed[0].items) {
           setCategories(parsed);
         } else {
-          setCategories(initialCategories);
-          await AsyncStorage.setItem('categories', JSON.stringify(initialCategories));
+          setCategories(DEFAULT_CATEGORIES);
+          await AsyncStorage.setItem('categories', JSON.stringify(DEFAULT_CATEGORIES));
         }
       } else {
-        setCategories(initialCategories);
-        await AsyncStorage.setItem('categories', JSON.stringify(initialCategories));
+        setCategories(DEFAULT_CATEGORIES);
+        await AsyncStorage.setItem('categories', JSON.stringify(DEFAULT_CATEGORIES));
       }
     } catch {
-      setCategories(initialCategories);
-      await AsyncStorage.setItem('categories', JSON.stringify(initialCategories));
+      setCategories(DEFAULT_CATEGORIES);
+      await AsyncStorage.setItem('categories', JSON.stringify(DEFAULT_CATEGORIES));
     }
     setLoading(false);
   };

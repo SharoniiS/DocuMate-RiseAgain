@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { AppColors } from '../constants/Colors';
 import { useCategories } from '../context/CategoriesContext';
-import { classifyToCategoryId } from '../keywordClassifier';
+import { classify } from '../keywordClassifier';
 
 type ScanStep = 'pick' | 'loading' | 'preview' | 'success';
 
@@ -31,7 +31,9 @@ export function ScanModal({ visible, onClose }: Props) {
   const [step, setStep] = useState<ScanStep>('pick');
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [pendingText, setPendingText] = useState<string | null>(null);
-  const [pendingCategory, setPendingCategory] = useState<string | null>(null);
+  const [predictedCategoryId, setPredictedCategoryId] = useState<string | null>(null);
+  const [predictedConfidence, setPredictedConfidence] = useState<number>(0);
+  const [predictedMatched, setPredictedMatched] = useState<string[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [editedTitle, setEditedTitle] = useState('');
   const [editedDate, setEditedDate] = useState('');
@@ -49,7 +51,9 @@ export function ScanModal({ visible, onClose }: Props) {
     setStep('pick');
     setPreviewUri(null);
     setPendingText(null);
-    setPendingCategory(null);
+    setPredictedCategoryId(null);
+    setPredictedConfidence(0);
+    setPredictedMatched([]);
     setSelectedCategoryId(null);
     setEditedTitle('');
     setEditedDate('');
@@ -100,23 +104,40 @@ export function ScanModal({ visible, onClose }: Props) {
       console.warn('OCR failed:', String(err));
     }
 
-    const categoryId = text ? classifyToCategoryId(text) : null;
+    const rules = categories
+      .filter(c => c.keywords && c.keywords.length > 0)
+      .map(c => ({ categoryId: c.id, keywords: c.keywords as string[] }));
+    const { categoryId, confidence, matched } = text
+      ? classify(text, rules)
+      : { categoryId: null, confidence: 0, matched: [] as string[] };
+
     const extractedTitle = extractTitle(text);
     const extractedDate = extractDate(text);
     const extractedDoctor = extractDoctor(text);
     const extractedKeywords = extractKeywords(text).slice(0, 8);
     setPendingText(text || null);
-    setPendingCategory(categoryId);
-    if (categoryId) setSelectedCategoryId(categoryId);
+    setPredictedCategoryId(categoryId);
+    setPredictedConfidence(confidence);
+    setPredictedMatched(matched);
     setEditedTitle(extractedTitle);
     setEditedDate(extractedDate);
     setEditedDoctor(extractedDoctor);
     setActiveKeywords(extractedKeywords);
     setOcrFailed(failed);
-    if (!categoryId) {
+
+    if (categoryId && confidence >= 0.67) {
+      // strong match — trust silently
+      setSelectedCategoryId(categoryId);
+    } else if (categoryId) {
+      // weak match — pre-select but ask for confirmation
+      setSelectedCategoryId(categoryId);
+      setShowCategoryPicker(true);
+    } else {
+      // no match — fall back to generalMed and open picker
       setSelectedCategoryId('generalMed');
       setShowCategoryPicker(true);
     }
+
     setPreviewUri(resolvedUri);
     setStep('preview');
   };
@@ -167,7 +188,16 @@ export function ScanModal({ visible, onClose }: Props) {
       return;
     }
 
-    addDocument(targetCatId, { uri: permanentUri, keywords: finalKeywords, title: finalTitle });
+    addDocument(targetCatId, {
+      uri: permanentUri,
+      keywords: finalKeywords,
+      title: finalTitle,
+      predictedCategoryId,
+      predictedConfidence,
+      matchedKeywords: predictedMatched,
+      wasCorrected: predictedCategoryId !== targetCatId,
+      ocrText: pendingText ?? undefined,
+    });
     setStep('success');
     setTimeout(() => handleClose(), 1600);
   };
@@ -253,10 +283,17 @@ export function ScanModal({ visible, onClose }: Props) {
                   <Text style={styles.aiLabel}>אנחנו חושבים</Text>
                 </View>
                 <Text style={styles.aiText}>
-                  {showCategoryPicker
+                  {showCategoryPicker && predictedConfidence === 0
                     ? 'לא הצלחנו לזהות — בחרי קטגוריה:'
                     : `זה נראה כמו ${categories.find(c => c.id === selectedCategoryId)?.name ?? 'מסמך רפואי'}${editedDate ? `\nמתאריך ${editedDate}` : ''}.`}
                 </Text>
+                {selectedCategoryId === predictedCategoryId && predictedConfidence > 0 && (
+                  <View style={styles.confidenceChip}>
+                    <Text style={styles.confidenceChipText}>
+                      ביטחון {Math.round(predictedConfidence * 100)}%
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* Category picker — מחוץ לפרטים נוספים */}
@@ -581,6 +618,20 @@ const styles = StyleSheet.create({
     color: AppColors.text,
     lineHeight: 22,
     textAlign: 'right',
+  },
+  confidenceChip: {
+    alignSelf: 'flex-end',
+    backgroundColor: AppColors.chip,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginTop: 2,
+  },
+  confidenceChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: AppColors.textSub,
+    letterSpacing: 0.3,
   },
 
   // שדה
