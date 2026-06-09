@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Image,
   Pressable,
@@ -10,8 +10,9 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog';
 import { AppColors } from '@/constants/Colors';
-import { useCategories } from '@/context/CategoriesContext';
+import { useCategories, TRASH_RETENTION_DAYS } from '@/context/CategoriesContext';
 
 const MONTHS_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
@@ -25,7 +26,8 @@ export default function DocumentScreen() {
   const { catId, uri } = useLocalSearchParams<{ catId: string; uri: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { categories } = useCategories();
+  const { categories, deleteDocument } = useCategories();
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
   const decodedUri = decodeURIComponent(uri ?? '');
   const category = categories.find(c => c.id === catId);
@@ -53,6 +55,13 @@ export default function DocumentScreen() {
 
   const isPdf = decodedUri.toLowerCase().endsWith('.pdf');
 
+  const handleDelete = () => {
+    const idx = category.items.findIndex(i => i.uri === decodedUri);
+    if (idx >= 0) deleteDocument(category.id, idx);
+    setConfirmVisible(false);
+    router.back();
+  };
+
   return (
     <View style={[dv.root, { paddingTop: insets.top }]}>
       {/* Header */}
@@ -61,9 +70,20 @@ export default function DocumentScreen() {
           <Ionicons name="arrow-back" size={22} color={AppColors.text} />
         </Pressable>
         <Text style={dv.headerTitle}>מסמך</Text>
-        <Pressable style={dv.iconBtn}>
-          <Ionicons name="share-outline" size={22} color={AppColors.text} />
-        </Pressable>
+        <View style={dv.headerActions}>
+          <Pressable
+            onPress={() => setConfirmVisible(true)}
+            style={dv.iconBtn}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="מחיקת מסמך"
+          >
+            <Ionicons name="trash-outline" size={22} color={AppColors.danger} />
+          </Pressable>
+          <Pressable style={dv.iconBtn} accessibilityRole="button" accessibilityLabel="שיתוף מסמך">
+            <Ionicons name="share-outline" size={22} color={AppColors.text} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -131,6 +151,13 @@ export default function DocumentScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <ConfirmDeleteDialog
+        visible={confirmVisible}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmVisible(false)}
+        message={`המסמך יעבור ל"נמחקו לאחרונה" ויישמר שם ${TRASH_RETENTION_DAYS} יום. אפשר לשחזר אותו בכל רגע.`}
+      />
     </View>
   );
 }
@@ -154,6 +181,11 @@ const dv = StyleSheet.create({
   iconBtn: {
     width: 38, height: 38, borderRadius: 999,
     alignItems: 'center', justifyContent: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   headerTitle: {
     fontSize: 16, fontWeight: '600', color: AppColors.text,
