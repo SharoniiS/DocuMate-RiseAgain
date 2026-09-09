@@ -6,36 +6,39 @@
 
 ---
 
-## 📌 About the Naming — Read This First
+## 📌 About the Naming
 
-If you see three different names in this codebase, **you are not looking at three projects**. You are looking at one project with a naming history. Here is the full picture, once, so nobody has to guess again.
+**This repo is `DocuMate-RiseAgain`** — one vertical of a broader product family called **DocuMate**.
 
-### Product hierarchy (the intended world)
+### Product hierarchy
 
-- **DocuMate** — the umbrella product. An AI-powered document classifier for people who deal with a lot of important paperwork. Product-level branding — what users see on the home screen (`app/(tabs)/home.tsx:45`).
-- **DocuMate RiseAgain** — the vertical this repository builds. Focused on IDF disabled veterans and PTSD patients. "RiseAgain" is the vertical suffix; the whole thing is *DocuMate for people who are rising again*.
+- **DocuMate** — umbrella product name. What users see as the brand in the app's home screen top bar (`app/(tabs)/home.tsx:45`).
+- **DocuMate RiseAgain** — this vertical (for IDF disabled veterans and PTSD patients). The full name for repo-level identifiers.
 - **DocuMate Family** *(planned, separate repo)* — household use case: family medical, school forms, insurance.
 - **DocuMate Business** *(planned, separate repo)* — business use case: invoices, contracts, HR.
 
-The pattern is: **`DocuMate <Vertical>`**. Each vertical lives in its own repo. This repo = the RiseAgain vertical.
+### Technical identifiers (all follow the `documate.<vertical>` pattern)
 
-### Legacy names you will encounter (and what to do about them)
+| Identifier | Value |
+|---|---|
+| GitHub repo | `SharoniiS/DocuMate-RiseAgain` |
+| `app.json` name | `DocuMate RiseAgain` |
+| `app.json` slug | `documate-riseagain` |
+| `app.json` scheme | `documateriseagain://` (deep links) |
+| Android package | `com.sharon43533.documate.riseagain` |
+| npm name | `documate-riseagain` |
 
-| Name you might see | Where | What it actually is | Action |
-|---|---|---|---|
-| **Documately** | Old commits, older README revisions | Working title that was dropped in favor of DocuMate. | Ignore. Fully renamed as of the cleanup commit. |
-| **RiseAgain** (bare, no "DocuMate" prefix) | `app.json` (name/slug/scheme), `com.sharon43533.riseagain` (Android package), GitHub repo name `SharoniiS/RiseAgain`, npm package name in `package.json` | Technical identifiers from before the naming was settled. | **Do NOT rename.** Changing `app.json` slug breaks the EAS project ID (`e22cdd24-0c91-4e1a-928d-48288f2937d2`); changing the Android package name treats installed dev clients as a different app; changing the GitHub repo name breaks external clone URLs. These are frozen technical debt on purpose. |
-| **DocuMate** | Home screen brand text (`app/(tabs)/home.tsx:45`) | The umbrella product name, correctly displayed to users. | Keep. This is intentional — the vertical suffix "RiseAgain" is internal/marketing, not day-to-day UI. |
-| **DocuMate RiseAgain** | README title, `.claude/memory/project_documate.md` header, `package.json` name | The full formal name of this repo's product. | Use this in documentation and repo-level identifiers, not in the app's UI. |
+### Legacy names in git history only
 
-### The rule going forward
+- **Documately** — early working title, dropped in favor of DocuMate. Only appears in older commits.
+- **RiseAgain** (bare, no "DocuMate" prefix) — the technical identifiers used to be just `RiseAgain` / `riseagain` / `com.sharon43533.riseagain`. Fully renamed in the technical-identifier cleanup commit. Only appears in older commits and any old EAS build history.
 
-- **User-facing UI:** `DocuMate` (the umbrella name — clean, short, brandable).
-- **Documentation, memory files, PR titles, npm name, formal references:** `DocuMate RiseAgain` (the specific vertical).
-- **Technical identifiers already burned in** (`app.json` slug, Android package, GitHub repo name): leave them as `RiseAgain`. Renaming them costs more than the confusion prevents.
-- **Never introduce** the name `Documately` in new code, docs, or commit messages. It's a legacy name.
+### Rules for anyone touching the codebase
 
-If you're a future contributor (human or AI) and you feel an urge to "fix" the RiseAgain references in `app.json` or the GitHub repo name — read the "Action" column of the table above before doing anything.
+- **User-facing UI brand:** `DocuMate` (short, umbrella name). Do not put "RiseAgain" in day-to-day UI copy.
+- **Documentation, PR titles, memory files, repo/package identifiers:** `DocuMate RiseAgain`.
+- **New vertical (Family, Business):** spin up a fresh repo with the same pattern (`SharoniiS/DocuMate-Family`, `com.sharon43533.documate.family`, etc.). Do not reuse this repo.
+- **Never introduce** the names `Documately` or bare `RiseAgain` in new code, docs, or commit messages — they are legacy.
 
 ---
 
@@ -420,7 +423,7 @@ Alerts:
 ## 📁 File Structure (Current + Planned)
 
 ```
-RiseAgain/
+DocuMate-RiseAgain/
   ├── app/
   │   ├── (tabs)/
   │   │   ├── _layout.tsx           # Tab bar + FAB
@@ -495,8 +498,8 @@ RiseAgain/
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/SharoniiS/RiseAgain.git
-cd RiseAgain
+git clone https://github.com/SharoniiS/DocuMate-RiseAgain.git
+cd DocuMate-RiseAgain
 npm install
 
 # 2. Set up Google Vision API (for OCR)
