@@ -1,4 +1,4 @@
-# Documately — AI-Powered Medical Document Classifier
+# DocuMate RiseAgain — AI-Powered Medical Document Classifier
 
 > **For:** IDF disabled veterans and PTSD patients  
 > **Vision:** A personal medical memory — automatically organized, searchable, and AI-enhanced  
@@ -6,9 +6,42 @@
 
 ---
 
+## 📌 About the Naming — Read This First
+
+If you see three different names in this codebase, **you are not looking at three projects**. You are looking at one project with a naming history. Here is the full picture, once, so nobody has to guess again.
+
+### Product hierarchy (the intended world)
+
+- **DocuMate** — the umbrella product. An AI-powered document classifier for people who deal with a lot of important paperwork. Product-level branding — what users see on the home screen (`app/(tabs)/home.tsx:45`).
+- **DocuMate RiseAgain** — the vertical this repository builds. Focused on IDF disabled veterans and PTSD patients. "RiseAgain" is the vertical suffix; the whole thing is *DocuMate for people who are rising again*.
+- **DocuMate Family** *(planned, separate repo)* — household use case: family medical, school forms, insurance.
+- **DocuMate Business** *(planned, separate repo)* — business use case: invoices, contracts, HR.
+
+The pattern is: **`DocuMate <Vertical>`**. Each vertical lives in its own repo. This repo = the RiseAgain vertical.
+
+### Legacy names you will encounter (and what to do about them)
+
+| Name you might see | Where | What it actually is | Action |
+|---|---|---|---|
+| **Documately** | Old commits, older README revisions | Working title that was dropped in favor of DocuMate. | Ignore. Fully renamed as of the cleanup commit. |
+| **RiseAgain** (bare, no "DocuMate" prefix) | `app.json` (name/slug/scheme), `com.sharon43533.riseagain` (Android package), GitHub repo name `SharoniiS/RiseAgain`, npm package name in `package.json` | Technical identifiers from before the naming was settled. | **Do NOT rename.** Changing `app.json` slug breaks the EAS project ID (`e22cdd24-0c91-4e1a-928d-48288f2937d2`); changing the Android package name treats installed dev clients as a different app; changing the GitHub repo name breaks external clone URLs. These are frozen technical debt on purpose. |
+| **DocuMate** | Home screen brand text (`app/(tabs)/home.tsx:45`) | The umbrella product name, correctly displayed to users. | Keep. This is intentional — the vertical suffix "RiseAgain" is internal/marketing, not day-to-day UI. |
+| **DocuMate RiseAgain** | README title, `.claude/memory/project_documate.md` header, `package.json` name | The full formal name of this repo's product. | Use this in documentation and repo-level identifiers, not in the app's UI. |
+
+### The rule going forward
+
+- **User-facing UI:** `DocuMate` (the umbrella name — clean, short, brandable).
+- **Documentation, memory files, PR titles, npm name, formal references:** `DocuMate RiseAgain` (the specific vertical).
+- **Technical identifiers already burned in** (`app.json` slug, Android package, GitHub repo name): leave them as `RiseAgain`. Renaming them costs more than the confusion prevents.
+- **Never introduce** the name `Documately` in new code, docs, or commit messages. It's a legacy name.
+
+If you're a future contributor (human or AI) and you feel an urge to "fix" the RiseAgain references in `app.json` or the GitHub repo name — read the "Action" column of the table above before doing anything.
+
+---
+
 ## 🎯 Project Overview
 
-Documately is a React Native app that lets users:
+**DocuMate RiseAgain** is a React Native app that lets users:
 1. **Scan** physical medical documents (photos/PDFs)
 2. **Extract** text via OCR (on-device, private)
 3. **Classify** documents automatically using ML (keyword rules → LaBSE embeddings → logistic regression)
@@ -599,5 +632,5 @@ If you're an AI resolving an issue on this project:
 ### For Humans
 
 - Check `PHASE_*.md` guides (to be created) for step-by-step Phase 2-7 implementation
-- Review `.claude/memory/project_documately.md` for architectural decisions
+- Review `.claude/memory/project_documate.md` for architectural decisions
 - Test on a real device (emulators don't test RTL or file system behavior correctly)
