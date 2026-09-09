@@ -41,7 +41,10 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "67de7595-2580-45d7-94be-3f6416ca0395"
+      }
     },
     "owner": "sharon43533"
   }
