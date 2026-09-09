@@ -1,6 +1,6 @@
 ---
-name: Documately — Project Context
-description: Medical document management app: stack, architecture, current state, what was built
+name: DocuMate RiseAgain — Project Context
+description: Medical document management app: stack, architecture, current state, what was built. Vertical of the DocuMate product family, focused on IDF disabled veterans and PTSD patients.
 type: project
 originSessionId: bf19311c-06e1-4d0e-ab24-f22f7f8be276
 ---

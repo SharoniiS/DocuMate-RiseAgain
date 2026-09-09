@@ -1,18 +1,18 @@
 {
   "expo": {
-    "name": "RiseAgain",
-    "slug": "RiseAgain",
+    "name": "DocuMate RiseAgain",
+    "slug": "documate-riseagain",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "riseagain",
+    "scheme": "documateriseagain",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
     "android": {
-      "package": "com.sharon43533.riseagain",
+      "package": "com.sharon43533.documate.riseagain",
       "supportsRTL": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -43,7 +43,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "e22cdd24-0c91-4e1a-928d-48288f2937d2"
+        "projectId": "67de7595-2580-45d7-94be-3f6416ca0395"
       }
     },
     "owner": "sharon43533"
